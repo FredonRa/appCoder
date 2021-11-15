@@ -5,24 +5,45 @@ import {
   Text, 
   View,
   Alert, 
+  Button,
   TextInput,
+  SafeAreaView,
   TouchableWithoutFeedback 
 } from 'react-native';
 
 import { MaterialIcons } from '@expo/vector-icons';
+import Header from './components/Header';
+import GameScreen from './screens/GameScreen';
+
+import {
+  useFonts,
+  Roboto_500Medium
+} from '@expo-google-fonts/roboto';
+
 
 export default function App() {
   const [ rows, setRows ] = useState([]);
-  const [ textInput, setTextInput ] = useState("")
+  const [ completedRows, setCompletedRows ] = useState([])
+  const [ textInput, setTextInput ] = useState("");
+  const [ completedTasks, setCompletedTasks ] = useState(false)
+  
+  let [fontsLoaded] = useFonts({
+    Roboto_500Medium
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   const addNewRow = () => {
     let newRow = {
       nombre: textInput,
       id: rows.length,
-      fav: false
+      completed: false
     }
     if (textInput.length){
       setRows([...rows, newRow])
+      setCompletedTasks(false)
     } else {
       Alert.alert("Ocurrió un problema", "El campo de texto está vacío, por favor vuelva a intentarlo")
     }
@@ -34,9 +55,10 @@ export default function App() {
     setRows(rowToDelete)
   }
 
-  const markRowAsFavorite = (index) => {
-    rows[index].fav = !rows[index].fav;
-    setRows([...rows]);
+  const markRowAsCompleted = (index) => {
+    rows[index].completed = true;
+    setCompletedRows(rows.filter((row) => row.completed))
+    setRows(rows.filter((row) => !row.completed));
   }
 
   const _renderRows = rows.map((row, index) => {
@@ -44,9 +66,9 @@ export default function App() {
       <View key={index} style={styles.containerRow}>
         <Text>{row.nombre}</Text>
         <View style={styles.containerActions}>
-          <TouchableWithoutFeedback  onPress={() => markRowAsFavorite(index)}>
+          <TouchableWithoutFeedback  onPress={() => markRowAsCompleted(index)}>
             <Text style={styles.action}>
-              <MaterialIcons name={row.fav ? "favorite" : "favorite-border"} size={24} color="black" />
+              <MaterialIcons name={row.fav ? "check-circle" : "check-circle-outline"} size={24} color="black" />
             </Text>
           </TouchableWithoutFeedback>
           <TouchableWithoutFeedback  onPress={() => removeRow(row)}>
@@ -58,30 +80,65 @@ export default function App() {
       </View>
     )
   })
- 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Aloooo Coder!</Text>
-      <View style={styles.containerTextInput}>
-        <TextInput value={textInput} style={styles.textInput} onChangeText={(text) => setTextInput(text)} />
-        <TouchableWithoutFeedback onPress={() => addNewRow()} >
-          <View style={styles.containerAddRow}>
-            <Text style={styles.textAddRow}>
-              Add
+
+  const _renderCompletedRows = completedRows.map((row, index) => {
+    return(
+      <View key={index} style={styles.containerRow}>
+        <Text>{row.nombre}</Text>
+        <View style={styles.containerActions}>
+          <TouchableWithoutFeedback>
+            <Text style={styles.action}>
+              <MaterialIcons name={"check-circle"} size={24} color="black" />
             </Text>
-          </View>
-        </TouchableWithoutFeedback>
+          </TouchableWithoutFeedback>
+        </View>
+      </View>
+    )
+  })
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {
+        !completedTasks?
+          <>
+            <Text style={styles.text}>Aloooo Coder!</Text>
+            <View style={styles.containerTextInput}>
+              <TextInput value={textInput} style={styles.textInput} onChangeText={(text) => setTextInput(text)} />
+              <TouchableWithoutFeedback onPress={() => addNewRow()}>
+                <View style={styles.containerAddRow}>
+                  <Text style={styles.textAddRow}>
+                    Add
+                  </Text>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </>
+        :
+        <Text style={styles.text}>Tareas completadas</Text>
+      }
+      <View style={styles.containerButtons}>
+        <Button title={rows.length + " Sin hacer"} onPress={() => setCompletedTasks(false)} />
+        <Button title={completedRows.length + " Completadas"} onPress={() => setCompletedTasks(true)} />
       </View>
       <View style={styles.containerRows}>
         { 
-          rows.length ?
-            _renderRows
+          rows.length || completedRows.length ?
+            !completedTasks? 
+              rows.length ?
+                _renderRows
+              :
+              <Text style={styles.notRows} >Todavía no hay tareas cargadas :(</Text>
+            :
+              completedRows.length ? 
+                _renderCompletedRows
+              :
+              <Text style={styles.notRows} >Todavía no hay tareas completadas :(</Text>
           :
             <Text style={styles.notRows} >Todavía no hay tareas cargadas :(</Text>
         }
       </View>
       <StatusBar style="auto" />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -90,12 +147,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#700B97",
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     width: "100%",
+    paddingTop: 40
   },
   text: {
     color: "#FEE440",
-    fontSize: 24
+    fontSize: 24,
+    fontFamily: "Roboto"
+
   },
   containerTextInput: {
     flex: 1,
@@ -124,6 +184,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "700",
     color: "#fff"
+  },
+  containerButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    width: "90%",
+    alignContent: "space-between"
   },
   containerRows: {
     height: "50%",
@@ -156,6 +223,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: 40,
     fontSize: 18,
-    fontWeight: "700"
+    fontWeight: "700",
+    fontFamily: "Roboto"
   }
 });
